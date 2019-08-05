@@ -9,6 +9,7 @@
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
+import math
 import classes
 
 class check(classes.tree):
@@ -117,7 +118,7 @@ class check(classes.tree):
             if self[x].t < 0:
                 return 0
 
-    def check_lengths_chr(treelist):
+    def check_lengths_chr(self, treelist):
         lenglist = []
         for x in treelist:
             lenglist.append(x.tlen)
@@ -127,5 +128,6 @@ class check(classes.tree):
             totalleng += x
 
         avglen = totalleng / len(lenglist)
+        return avglen
 
 
