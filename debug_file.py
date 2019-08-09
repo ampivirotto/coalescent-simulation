@@ -5,13 +5,14 @@
 """
 
 import classes
+import copy
 
-N = 100
-ss = 3
-mutrate = 1e-7
+N = 1000
+ss = 30
+mutrate = 0.0001
 seed = 14
-length = 100
-recombrate = 0.01
+length = 20
+recombrate = 0.0001
 output_name = "trees_output.txt"
 f = open(output_name, "w")
 f.write("Interval\tTree\tLength\n")
@@ -21,7 +22,7 @@ treelist = []
 t = classes.tree(N, ss, seed)
 
 while True:
-    finish = t.continuous_coal(mutrate)
+    finish = t.continuous_coal()
     if finish == 0:
         break
 
@@ -32,10 +33,12 @@ t.check_totalpos()
 start_interval = 0
 while True:
     end_int = t.find_interval(recombrate, start_interval, length)
+    t.mutate(mutrate)
     t.check(True, True)
     t.check_totalpos()
     f.write("{}\t{}\t{}\n".format(t.interval, t.newick(), t.tlen))
-    treelist.append(t.tlen)
+    copied_tree = copy.deepcopy(t)
+    treelist.append(copied_tree)
     if end_int >= length:
         break
     else:
@@ -44,10 +47,33 @@ while True:
 
 f.close()
 
-totalleng = 0
+def return_mutes(tree):
+    mutationdict = {}
+    blist = []
+    def rec_mute(tree, x):
+        children = tree[x].child
+        for y in children:
+            blist.append(y)
+            if not tree[x].isexternal():
+                rec_mute(tree, y)
+        return blist
+    for x in tree.keys():
+        mutation = tree[x].mut
+        for y in mutation:
+            if tree[x].isexternal():
+                mutationdict[y] = x
+            else:
+                newlist = rec_mute(tree, x)
+                mutationdict[y] = newlist
+                blist = []
+    return mutationdict
+
+m = open("mutations.txt", "w")
 for x in treelist:
-    totalleng += x
+    mutdict = return_mutes(x)
+    for key in sorted(mutdict.keys()):
+        m.write("{}\t{}\n".format(key, mutdict[key]))
 
-avglen = totalleng/len(treelist)
+m.close()
 
-print(avglen)
+

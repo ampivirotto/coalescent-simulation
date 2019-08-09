@@ -13,7 +13,7 @@ class branch:
     """
     structure to contain branch of tree
     """
-    def __init__(self,id=-1, child = None, par = -1, t = 0.0, mut = 0, totalpos = 0):
+    def __init__(self,id=-1, child = None, par = -1, t = 0.0, mut = None, totalpos = 0):
         """
             child is the children of a branch, if external this will be an empty list
             par is the parent node/branch
@@ -29,12 +29,15 @@ class branch:
             self.child = []
         self.par = par
         self.t = max(0.0,t)
-        self.mut = mut
+        if mut !=None:
+            self.mut = list(mut)
+        else:
+            self.mut = []
         self.totalpos = max(0.0, totalpos)
 
     def update(self,id = None, child = None, par = None, t = None, mut = None, totalpos = None):
         """
-            update a branch with all parameters 
+            update a branch with all parameters
         """
         if id != None:
             self.id = id
@@ -45,19 +48,19 @@ class branch:
         if t != None:
             self.t = t
         if mut != None:
-            self.mut += mut
+            self.mut.append(mut)
         if totalpos != None:
             self.totalpos = totalpos
 
     def hasnotcoalescenced(self):
         """
-            returns True if branch has not coalescenced, this means that the parent for a branch is still -1 
+            returns True if branch has not coalescenced, this means that the parent for a branch is still -1
         """
         return self.par == -1
 
     def isexternal(self):
         """
-            returns True if branch is external which is when child is empty 
+            returns True if branch is external which is when child is empty
         """
         return self.child == []
 
@@ -72,15 +75,15 @@ class tree(dict):
         initialize tree class with parameters popsize, samplesize, seed
         Attributes include:
             tlen = total length of the tree
-            tmrca = time to the most recent common ancestor 
+            tmrca = time to the most recent common ancestor
             totalgen = total number of generations = tmrca
             rootid = is the branch number of the root (starts at -1)
             n = number of edges total
             p = number of edges with no parent (used to identify when coalescence finishes)
             popsize = initial population size
-            samplesize = size of sample, number of external branches 
+            samplesize = size of sample, number of external branches
             totalmut = total number of mutations across the tree
-            interval = interval along the chromosome that the tree is found 
+            interval = interval along the chromosome that the tree is found
         """
         self.tlen = 0.0 ## total length of tree
         self.tmrca = 0.0 ## time of most recent common ancestor (number of gen to coalescent)
@@ -227,7 +230,7 @@ class tree(dict):
         else:
             return 1
 
-    def continuous_coal(self, mutrate):
+    def continuous_coal(self):
         """
         create tree based on continuous model
         """
@@ -254,38 +257,51 @@ class tree(dict):
 
         ##update old branches
         self[node1].update(par = nextlabel)
-        #num1 = self[node1].mutate(mutrate)
         self[node2].update(par = nextlabel)
-        #num2 = self[node2].mutate(mutrate)
-        #self.totalmut += (num1 + num2)
 
         if self.p == 1:
             keylist = self.keys()
             self.rootid = max(keylist)
-            for x in keylist:
-                num = self[x].mutate(mutrate)
-                self.totalmut += num
             return 0
         else:
             return 1
-    
-    ### MUTATION ###
+
+    ################################## MUTATION ###########################################
     def mutate(self, mutrate):
         """
-            
+            once interval of tree is found, can then randomly place mutations on tree
         """
-        ## find distance of interval 
+        ## find distance of interval
         interval = self.interval
         end = interval[1]
         start = interval[0]
         distance = end - start
 
-        ## find number of mutations that would occur on the tree 
+        ## find number of mutations that would occur on the tree and set number of total mutations
         nummutate = np.random.poisson((self.tlen * mutrate * distance))
-        #print(nummutate)
-        self.update(mut = nummutate)
-        return nummutate
-    
+        self.totalmut = nummutate
+
+        ## find random location to stick mutation on tree and then find random location along interval where it occurs
+        ## for each mutation
+        for x in range(nummutate):
+            ##pick a random location on tree
+            pos = random.random() * self.tlen
+
+            ## figure out what branch this random location falls on
+            adding_up_branch_lengths = 0
+            branch_w_mutation = 0
+            for x in self.keys():
+                adding_up_branch_lengths += self[x].t
+                if adding_up_branch_lengths > pos:
+                    branch_w_mutation = x
+                    break
+
+            ## figure out where along interval the mutation occurs
+            interval_pos = random.random() * distance + start
+
+            self[branch_w_mutation].update(mut = interval_pos)
+
+
     ### SMC ###
     def coal_events_dict_creation(self):
         """
@@ -687,7 +703,6 @@ class tree(dict):
         """
         ## find children of root
         old_root = self.rootid
-        children_of_root = self[old_root].child
 
         ## update old root with new time
         new_time_old_root = xpos - self[old_root].totalpos
@@ -703,7 +718,7 @@ class tree(dict):
         self.rootid = emptylabel
 
         self.tmrca = xpos
-    
+
 
     ### CHECK ###
     def check_totalpos(self):
