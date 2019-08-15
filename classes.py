@@ -8,6 +8,9 @@ import random
 import numpy as np
 from collections import defaultdict
 import math
+import sys
+
+
 
 class branch:
     """
@@ -47,7 +50,9 @@ class branch:
             self.child = child
         if t != None:
             self.t = t
-        if mut != None:
+        if mut == []:
+            self.mut = []
+        elif mut != None:
             self.mut.append(mut)
         if totalpos != None:
             self.totalpos = totalpos
@@ -123,7 +128,7 @@ class tree(dict):
         ## return these nodes as a list
         return nodelist
 
-    def find_interval(self, recombrate, start_interval, length):
+    def find_interval(self, recombrate, inter_interval, length, start_interval):
         """
         find interval along chr for tree
         """
@@ -131,7 +136,7 @@ class tree(dict):
         time_to_recombination_event = np.random.exponential(scale = self.tlen * recombrate)
 
         ## find new end time as length to event plus start
-        new_end = time_to_recombination_event + start_interval
+        new_end = time_to_recombination_event + inter_interval
 
         ## if end is longer than total length set end as total length
         if new_end > length:
@@ -280,6 +285,10 @@ class tree(dict):
         ## find number of mutations that would occur on the tree and set number of total mutations
         nummutate = np.random.poisson((self.tlen * mutrate * distance))
         self.totalmut = nummutate
+
+        ## empty all branches of mutations
+        for x in self.keys():
+            self[x].update(mut = [])
 
         ## find random location to stick mutation on tree and then find random location along interval where it occurs
         ## for each mutation
@@ -500,9 +509,10 @@ class tree(dict):
 
         ## how is the tree updated
         ##
+        same = False
         if label == xbranch:
             #self.check_totalpos()
-            print("same")
+            same = True
         ## if the parent of the selected branch has a parent of -1, if the parent is the root (max(self))
         elif self[self[label].par].par == -1:
             self.root_update(label, pos, xbranch, xpos)
@@ -518,6 +528,7 @@ class tree(dict):
         new_sum = self.sumbranchlengths()
         self.tlen = new_sum
         #self.check_totalpos()
+        return same
 
     def root_update(self, label, pos, xlabel, xpos):
         """
@@ -749,19 +760,24 @@ class tree(dict):
         """
         check to see if each leaf to root length is the same
         """
-        lengthlist = []
+        def lappend(lengthlist, length):
+            lengthlist.append(length)
+            return lengthlist
+
         def leaf_to_root(self, x, totalleng):
             totalleng = totalleng + self[x].t
             x = self[x].par
             if x == -1:
-                lengthlist.append(round(totalleng, 6))
+                return round(totalleng, 6)
             else:
                 leaf_to_root(self, x, totalleng)
 
+        lengthlist = []
         for x in self.keys():
             totalleng = 0
             if self[x].isexternal():
-                leaf_to_root(self, x, totalleng)
+                length = leaf_to_root(self, x, totalleng)
+                lengthlist = lappend(lengthlist, length)
         if lengthlist.count(lengthlist[0]) == len(lengthlist):
             return False, lengthlist
         else:
@@ -826,13 +842,22 @@ class tree(dict):
 
     def check_lengths_chr(self, treelist):
         lenglist = []
+        tmrcalist = []
         for x in treelist:
             lenglist.append(x.tlen)
+            tmrcalist.append(x.tmrca)
 
         totalleng = 0
         for x in lenglist:
             totalleng += x
 
         avglen = totalleng / len(lenglist)
-        return avglen
+
+        totaltmrca = 0
+        for x in tmrcalist:
+            totaltmrca += x
+
+        avgtmrca = totaltmrca/len(tmrcalist)
+
+        return avglen, avgtmrca
 
