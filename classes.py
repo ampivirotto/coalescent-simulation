@@ -515,11 +515,14 @@ class tree(dict):
             same = True
         ## if the parent of the selected branch has a parent of -1, if the parent is the root (max(self))
         elif self[self[label].par].par == -1:
+            print("Root update")
             self.root_update(label, pos, xbranch, xpos)
         elif self[label].par == xbranch:
+            print("parent Update")
             self.parent_update(label, xbranch, xpos, pos)
             #self.check_totalpos()
         else:
+            print("nonpar update")
             self.nonpar_update(label, xbranch, xpos, pos)
 
         error = self.check_allbranches()
@@ -574,6 +577,7 @@ class tree(dict):
 
         ## if recombining branch is not root or sister
         else:
+            print("root - rec not root or sister")
             ## calculate new lengths
             new_empty_len = self[xlabel].totalpos - xpos
             new_recombine_len = self[xlabel].t - new_empty_len
@@ -592,12 +596,17 @@ class tree(dict):
 
             new_root_children = list(self[sister].child)
             if xlabel in new_root_children:
+                print("case 1")
                 new_root_children.remove(xlabel)
                 new_root_children = [new_root_children[0], sister]
                 new_sis_parent = self.rootid
                 self[sis_xlabel].update(par = new_sis_parent)
-
+            elif par_xlabel in new_root_children:
+                print("case 2")
+                new_sis_parent = self[xlabel].par
+                self[par_xlabel].update(child = [sister, sis_xlabel], par = self.rootid)
             else:
+                print("case 3")
                 new_sis_parent = self[xlabel].par
                 self[par_xlabel].update(child = [sister, sis_xlabel])
 
@@ -681,7 +690,9 @@ class tree(dict):
 
         if xlabel == self.rootid:
             self.recomb_at_root(label, xpos, emptylabel)
+            print("recomb at root")
         else:
+            print("recomb elsewhere")
             ## find new lengths of branch x and new branch
             temp = self[xlabel].totalpos - xpos
             new_x_length = self[xlabel].t - temp
@@ -764,19 +775,27 @@ class tree(dict):
             lengthlist.append(length)
             return lengthlist
 
-        def leaf_to_root(self, x, totalleng):
+        def leaf_to_root(self, x, totalleng, counter):
             totalleng = totalleng + self[x].t
             x = self[x].par
+            counter += 1
+
+            if counter > 100:
+                raise Exception("ERROR")
             if x == -1:
+                print("at root")
                 return round(totalleng, 6)
             else:
-                leaf_to_root(self, x, totalleng)
-
+                print(x)
+                leaf_to_root(self, x, totalleng, counter)
+        print(self)
         lengthlist = []
+        counter = 0
         for x in self.keys():
             totalleng = 0
             if self[x].isexternal():
-                length = leaf_to_root(self, x, totalleng)
+                print("starting at " + str(x))
+                length = leaf_to_root(self, x, totalleng, counter)
                 lengthlist = lappend(lengthlist, length)
         if lengthlist.count(lengthlist[0]) == len(lengthlist):
             return False, lengthlist

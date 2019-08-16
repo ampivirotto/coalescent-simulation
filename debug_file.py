@@ -7,8 +7,8 @@
 import classes
 import copy
 
-N = 1000
-ss = 10
+N = 100
+ss = 5
 mutrate = 1e-3
 seed = 14
 length = 200
