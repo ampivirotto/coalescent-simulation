@@ -9,10 +9,10 @@ import copy
 
 N = 100
 ss = 5
-mutrate = 1e-3
+mutrate = 1e-8
 seed = 14
-length = 200
-recombrate = 1e-3
+length = 2000
+recombrate = 1e-8
 output_name = "trees_output.txt"
 f = open(output_name, "w")
 f.write("Interval\tTree\tLength\n")
